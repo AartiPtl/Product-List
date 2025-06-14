@@ -1,58 +1,62 @@
-import { StyleSheet, Text, View, TextInput } from 'react-native';
-import React, { useEffect } from 'react';
-import { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import LoginScreen from './Screens/Login';
+import HomeScreen from './Screens/Home';
+import AddProductScreen from './Screens/AddProduct';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ActivityIndicator, View } from 'react-native';
 
-const App = () => {
+const Stack = createNativeStackNavigator();
 
-  const [data, setData] = useState([]);
-  const searchUser = async (text) => {
-    const url = 'https://jsonplaceholder.typicode.com/posts/1';
-    console.warn(url);
-    let result = await fetch(url);
-    result = await result.json();
-    console.log(text)
-    if (result) {
-      setData(result)
-    }
-    //useEffect(()=> {
-    //searchUser();
-    //},[])
+export default function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loading, setLoading] = useState(true); // for loading state
+
+  useEffect(() => {
+    const checkLoginStatus = async () => {
+      try {
+        const token = await AsyncStorage.getItem('token');
+        if (token) setIsLoggedIn(true);
+      } catch (error) {
+        console.error('Error checking token', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkLoginStatus();
+  }, []);
+
+  if (loading) {
+    // Optional: show a loading spinner while checking login status
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
   }
 
   return (
-    <View style={styles.container}>
-      <TextInput
-        style={styles.input}
-        placeholder={'Search'}
-        onChangeText={(text) => searchUser(text)}
-      />
-      {
-        data.length ?
-          data.map((item) => <View
-            style={{ padding: 10, flexDirection: 'row', justifyContent: 'space-between' }}>
-            <Text style={{ fontSize: 20 }}>{item.name}</Text>
-            <Text style={{ fontSize: 20 }}>{item.age}</Text>
-            <Text style={{ fontSize: 20 }}>{item.email}</Text>
-          </View>)
-          : null
-      }
-    </View>
+    <NavigationContainer>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        {!isLoggedIn ? (
+          <Stack.Screen name="Login">
+            {(props) => <LoginScreen {...props} setIsLoggedIn={setIsLoggedIn} />}
+          </Stack.Screen>
+        ) : (
+          <>
+            <Stack.Screen name="Home">
+              {(props) => <HomeScreen {...props} setIsLoggedIn={setIsLoggedIn} />}
+            </Stack.Screen>
+            <Stack.Screen
+              name="AddProduct"
+              component={AddProductScreen}
+              options={{ headerShown: true, title: 'Add Product' }}
+            />
+          </>
+        )}
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  input: {
-    borderColor: "blue",
-    borderWidth: 1,
-    fontSize: 20,
-    padding: 10
-  }
-});
-
-export default App;
